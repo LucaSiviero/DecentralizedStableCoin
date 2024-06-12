@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {Test, console} from "../lib/forge-std/src/Test.sol";
-import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
-import {DeployDecentralizedStableCoin} from "../script/DeployDecentralizedStableCoin.s.sol";
+import {Test, console} from "../../lib/forge-std/src/Test.sol";
+import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
+import {DeployDecentralizedStableCoin} from "../../script/DeployDecentralizedStableCoin.s.sol";
 
 contract TestDecentralizedStableCoin is Test {
     error OwnableUnauthorizedAccount(address account);
@@ -24,9 +24,7 @@ contract TestDecentralizedStableCoin is Test {
 
     function testNotOwnerCanNotMint() public {
         vm.startPrank(USER);
-        vm.expectRevert(
-            abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, USER)
-        );
+        vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, USER));
         dsc.mint(USER, 1 ether);
         vm.stopPrank();
     }
