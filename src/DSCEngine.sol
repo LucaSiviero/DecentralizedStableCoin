@@ -5,6 +5,8 @@ import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {console} from "../lib/forge-std/src/Test.sol";
+
 /**
  * @title DSCengine
  * @author Luca Siviero
@@ -19,7 +21,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
  * @notice This contract is the core of the DSC system. It handles all the logic: minting and redeeming DSC, depositing and withdrowing collateral.
  * @notice This contrac is very loosely based on the Maker DAO (DSS) system.
  */
-
 contract DSCEngine is ReentrancyGuard {
     error DSCEngine__NeedsMoreThanZero();
     error DSCEngine__TokenAddressesAndPriceFeedAddressesMustBeSameLength();

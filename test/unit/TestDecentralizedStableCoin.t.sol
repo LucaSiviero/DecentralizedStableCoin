@@ -3,6 +3,8 @@ pragma solidity ^0.8.18;
 
 import {Test, console} from "../../lib/forge-std/src/Test.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
+import {DSCEngine} from "../../src/DSCEngine.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {DeployDecentralizedStableCoin} from "../../script/DeployDecentralizedStableCoin.s.sol";
 
 contract TestDecentralizedStableCoin is Test {
@@ -11,6 +13,8 @@ contract TestDecentralizedStableCoin is Test {
 
     DeployDecentralizedStableCoin deployer;
     DecentralizedStableCoin dsc;
+    DSCEngine dscEngine;
+    HelperConfig helperConfig;
     address USER = makeAddr("USER");
     uint256 s_startingBalance = 1000 ether;
     address OWNER;
@@ -18,7 +22,7 @@ contract TestDecentralizedStableCoin is Test {
     function setUp() public {
         vm.deal(USER, s_startingBalance);
         deployer = new DeployDecentralizedStableCoin();
-        dsc = deployer.run();
+        (dsc, dscEngine, helperConfig) = deployer.run();
         OWNER = dsc.owner();
     }
 

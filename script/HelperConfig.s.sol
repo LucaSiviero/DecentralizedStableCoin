@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {Script} from "../lib/forge-std/src/Script.sol";
+import {console} from "../lib/forge-std/src/Test.sol";
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../src/DSCEngine.sol";
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
@@ -19,7 +20,7 @@ contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
     uint8 public constant DECIMALS = 8;
     int256 public constant ETH_USD_PRICE = 2000e8;
-    int256 public constant BTC_USD_PRICE = 20000e8;
+    int256 public constant BTC_USD_PRICE = 1000e8;
 
     constructor() {
         if (block.chainid == 11155111) {
