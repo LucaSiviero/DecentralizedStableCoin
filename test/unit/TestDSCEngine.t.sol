@@ -19,6 +19,8 @@ contract TestDSCEngine is Test {
     address wbtc;
 
     address public USER = makeAddr("USER");
+    address public LIQUIDATOR = makeAddr("LIQUIDATOR");
+
     uint256 public constant INITIAL_AMOUNT = 1000 ether;
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
 
@@ -93,7 +95,6 @@ contract TestDSCEngine is Test {
         ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
         dscEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
         vm.stopPrank();
-
         _;
     }
 
@@ -103,5 +104,44 @@ contract TestDSCEngine is Test {
         uint256 expectedDepositAmount = dscEngine.getTokenAmountFromUsd(weth, collateralValueInUsd);
         assertEq(totalDscMinted, expectedTotalDscMinted);
         assertEq(AMOUNT_COLLATERAL, expectedDepositAmount);
+    }
+
+    /////////////////////
+    // Mint DSC tests  //
+    /////////////////////
+
+    function testMintDscWithoutDepositingCollateral() public {
+        uint256 expectedHealthFactor = 0;
+        vm.startPrank(USER);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine__BreaksHealthFactor.selector, expectedHealthFactor));
+        dscEngine.mintDsc(1 ether, weth);
+        vm.stopPrank();
+    }
+
+    //////////////////////
+    // Liquidate tests  //
+    //////////////////////
+
+    function testLiquidationCantHappenWithGoodHealthFactor() public depositedCollateral {
+        vm.startPrank(USER);
+        dscEngine.mintDsc(5 ether, weth);
+        uint256 healthFactor = dscEngine.getHealthFactor(USER);
+        console.log(healthFactor);
+        vm.stopPrank();
+        vm.prank(LIQUIDATOR);
+        vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOk.selector);
+        dscEngine.liquidate(weth, USER, AMOUNT_COLLATERAL);
+    }
+
+    /////////////////////////
+    // HealthFactor tests  //
+    /////////////////////////
+
+    function testHealthFactorIsBelowThreshold() public depositedCollateral {
+        vm.startPrank(USER);
+        uint256 amountDscToMint = 5.01 ether;
+        vm.expectRevert();
+        dscEngine.mintDsc(amountDscToMint, weth);
+        vm.stopPrank();
     }
 }
