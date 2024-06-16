@@ -28,12 +28,12 @@ contract TestDSCEngine is Test {
     uint256 public constant MINT_AMOUNT = 5 ether;
 
     function setUp() public {
-        vm.deal(USER, INITIAL_AMOUNT);
         deployer = new DeployDecentralizedStableCoin();
         (dsc, dscEngine, helperConfig) = deployer.run();
         (ethUsdPriceFeed, btcUsdPriceFeed, weth, wbtc,) = helperConfig.activeNetworkConfig();
 
         ERC20Mock(weth).mint(USER, INITIAL_AMOUNT);
+        ERC20Mock(weth).mint(LIQUIDATOR, INITIAL_AMOUNT);
     }
 
     ////////////////////////
@@ -138,6 +138,7 @@ contract TestDSCEngine is Test {
 
         vm.startPrank(LIQUIDATOR);
         console.log("Calling liquidate");
+        ERC20Mock(weth).approve(address(dscEngine), MINT_AMOUNT);
         dscEngine.liquidate(weth, USER, MINT_AMOUNT);
         vm.stopPrank();
         _;
@@ -161,11 +162,14 @@ contract TestDSCEngine is Test {
         vm.stopPrank();
 
         MockV3Aggregator(ethUsdPriceFeed).updateAnswer(int256(1e8));
-        uint256 userHealthFactor = dscEngine.getHealthFactor(USER);
-        console.log(userHealthFactor);
-
         vm.startPrank(LIQUIDATOR);
-        dscEngine.liquidate(weth, USER, AMOUNT_COLLATERAL);
+        console.log("MINT_AMOUNT", MINT_AMOUNT);
+        console.log("LIQUIDATOR BALANCE", ERC20Mock(weth).balanceOf(LIQUIDATOR));
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.depositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, MINT_AMOUNT);
+
+        console.log("DSCEngine is allowed to move", ERC20Mock(weth).allowance(LIQUIDATOR, address(dscEngine)));
+        dscEngine.liquidate(weth, USER, MINT_AMOUNT);
         vm.stopPrank();
     }
 

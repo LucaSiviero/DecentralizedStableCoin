@@ -132,7 +132,7 @@ contract DSCEngine is ReentrancyGuard {
         moreThanZero(amountCollateral)
         nonReentrant
     {
-        _redeemCollateral(msg.sender, msg.sender, tokenCollateralAddress, amountCollateral);
+        _redeemCollateral(msg.sender, msg.sender, tokenCollateralAddress, amountCollateral, false);
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -178,7 +178,7 @@ contract DSCEngine is ReentrancyGuard {
         moreThanZero(debtToCover)
         nonReentrant
     {
-        console.log("Liquidate");
+        console.log("Liquidating this amount of debt", debtToCover);
         // Check user health factor
         uint256 startingUserHealthFactor = _healthFactor(user);
         if (startingUserHealthFactor >= MIN_HEALTH_FACTOR) {
@@ -193,15 +193,12 @@ contract DSCEngine is ReentrancyGuard {
         console.log("tokenAmountFromDebtCovered", tokenAmountFromDebtCovered);
 
         // Provide a 10% bonus to the liquidator!
-        uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
-        console.log("bonusCollateral", bonusCollateral);
-
-        uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
-        console.log("totalCollateralToRedeem", totalCollateralToRedeem);
+        //uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
 
         // Now redeem and burn
-        _redeemCollateral(user, msg.sender, collateral, totalCollateralToRedeem);
+        _redeemCollateral(user, msg.sender, collateral, tokenAmountFromDebtCovered, true);
         console.log("Collateral redeemed");
+        console.log("Burining DSC", debtToCover);
 
         _burnDsc(debtToCover, user, msg.sender);
         uint256 endingUserHealthFactor = _healthFactor(user);
@@ -215,14 +212,21 @@ contract DSCEngine is ReentrancyGuard {
         healthFactor = _healthFactor(user);
     }
 
-    function _redeemCollateral(address from, address to, address tokenCollateralAddress, uint256 amountCollateral)
-        private
-    {
-        console.log("Collateral deposited from user is", s_collateralDeposited[from][tokenCollateralAddress]);
-        console.log("AmountCollateral is", amountCollateral);
+    function _redeemCollateral(
+        address from,
+        address to,
+        address tokenCollateralAddress,
+        uint256 amountCollateral,
+        bool isLiquidation
+    ) private {
         s_collateralDeposited[from][tokenCollateralAddress] -= amountCollateral;
         emit CollateralRedeemed(from, to, tokenCollateralAddress, amountCollateral);
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
+        // Here you have to add the liquidation bonus!!!
+        if (isLiquidation) {
+            uint256 bonusCollateral = (amountCollateral * LIQUIDATION_BONUS) / LIQUIDATION_PRECISION;
+            s_collateralDeposited[to][tokenCollateralAddress] += bonusCollateral;
+        }
         if (!success) {
             revert DSCEngine__TransferFailed();
         }
@@ -237,6 +241,8 @@ contract DSCEngine is ReentrancyGuard {
      */
     function _burnDsc(uint256 amountDscToBurn, address onBehalfOf, address dscFrom) private {
         s_dscMinted[onBehalfOf] -= amountDscToBurn;
+        console.log("Transfering", amountDscToBurn);
+        console.log("dscFrom is", dscFrom);
         bool success = i_dscAddress.transferFrom(dscFrom, address(this), amountDscToBurn);
 
         if (!success) {
