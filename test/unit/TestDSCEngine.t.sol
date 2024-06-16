@@ -7,6 +7,8 @@ import {DSCEngine} from "../../src/DSCEngine.sol";
 import {DeployDecentralizedStableCoin} from "../../script/DeployDecentralizedStableCoin.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract TestDSCEngine is Test {
     DeployDecentralizedStableCoin deployer;
@@ -23,6 +25,7 @@ contract TestDSCEngine is Test {
 
     uint256 public constant INITIAL_AMOUNT = 1000 ether;
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
+    uint256 public constant MINT_AMOUNT = 5 ether;
 
     function setUp() public {
         vm.deal(USER, INITIAL_AMOUNT);
@@ -80,7 +83,6 @@ contract TestDSCEngine is Test {
         vm.stopPrank();
     }
 
-    // Stopped at 6.13 lesson 17
     function testRevertsWithUnapprovedCollateral() public {
         ERC20Mock randomToken = new ERC20Mock();
         console.log(randomToken.name());
@@ -122,6 +124,25 @@ contract TestDSCEngine is Test {
     // Liquidate tests  //
     //////////////////////
 
+    modifier liquidated() {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.depositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, MINT_AMOUNT);
+        vm.stopPrank();
+
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(int256(1e18));
+        (, int256 price,,,) = AggregatorV3Interface(ethUsdPriceFeed).latestRoundData();
+        console.log("Calling healthFactor");
+        uint256 userHealthFactor = dscEngine.getHealthFactor(USER);
+        console.log(userHealthFactor);
+
+        vm.startPrank(LIQUIDATOR);
+        console.log("Calling liquidate");
+        dscEngine.liquidate(weth, USER, MINT_AMOUNT);
+        vm.stopPrank();
+        _;
+    }
+
     function testLiquidationCantHappenWithGoodHealthFactor() public depositedCollateral {
         vm.startPrank(USER);
         dscEngine.mintDsc(5 ether, weth);
@@ -131,6 +152,21 @@ contract TestDSCEngine is Test {
         vm.prank(LIQUIDATOR);
         vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOk.selector);
         dscEngine.liquidate(weth, USER, AMOUNT_COLLATERAL);
+    }
+
+    function testUserGetsLiquidated() public {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dscEngine), AMOUNT_COLLATERAL);
+        dscEngine.depositCollateralAndMintDSC(weth, AMOUNT_COLLATERAL, MINT_AMOUNT);
+        vm.stopPrank();
+
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(int256(1e8));
+        uint256 userHealthFactor = dscEngine.getHealthFactor(USER);
+        console.log(userHealthFactor);
+
+        vm.startPrank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, AMOUNT_COLLATERAL);
+        vm.stopPrank();
     }
 
     /////////////////////////
