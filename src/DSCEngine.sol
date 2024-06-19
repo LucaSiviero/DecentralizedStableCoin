@@ -228,8 +228,6 @@ contract DSCEngine is ReentrancyGuard {
      */
     function _burnDsc(uint256 amountDscToBurn, address onBehalfOf, address dscFrom) private {
         s_dscMinted[onBehalfOf] -= amountDscToBurn;
-        console.log("Transfering", amountDscToBurn);
-        console.log("dscFrom is", dscFrom);
         bool success = i_dscAddress.transferFrom(dscFrom, address(this), amountDscToBurn);
 
         if (!success) {
@@ -339,5 +337,9 @@ contract DSCEngine is ReentrancyGuard {
 
     function getCollateralTokens() external view returns (address[] memory) {
         return s_collateralTokens;
+    }
+
+    function getCollateralTokenPriceFeed(address token) public view returns (address) {
+        return s_priceFeeds[token];
     }
 }
