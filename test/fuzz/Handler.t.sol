@@ -31,7 +31,7 @@ contract Handler is Test {
     // redeem collateral
 
     function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
-        ERC20Mock collateral = getCollateralFromSeed(collateralSeed);
+        ERC20Mock collateral = _getCollateralFromSeed(collateralSeed);
         amountCollateral = bound(amountCollateral, 1, MAX_DEPOSIT_SIZE);
         vm.startPrank(msg.sender);
         collateral.mint(msg.sender, amountCollateral);
@@ -40,7 +40,18 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    function getCollateralFromSeed(uint256 collateralSeed) private view returns (ERC20Mock) {
+    function redeemCollateral(uint256 collateralSeed, uint256 collateralAmount) public {
+        ERC20Mock collateral = _getCollateralFromSeed(collateralSeed);
+        uint256 maxCollateralToRedeem = dscEngine.getCollateralBalanceOfUser(msg.sender, address(collateral));
+        collateralAmount = bound(collateralAmount, 0, maxCollateralToRedeem);
+        if (collateralAmount == 0) {
+            return;
+        }
+        vm.prank(msg.sender);
+        dscEngine.redeemCollateral(address(collateral), collateralAmount);
+    }
+
+    function _getCollateralFromSeed(uint256 collateralSeed) private view returns (ERC20Mock) {
         if (collateralSeed % 2 == 0) {
             return weth;
         }
